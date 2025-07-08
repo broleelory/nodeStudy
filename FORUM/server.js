@@ -12,7 +12,7 @@ app.use(express.urlencoded({extended:true}))
 
 
 // 몽고db 연결 코드
-const { MongoClient } = require('mongodb')
+const { MongoClient,ObjectId } = require('mongodb')
 
 let db
 const url = 'mongodb+srv://admin:qwer1234@cluster0.9gc9v.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
@@ -45,7 +45,7 @@ app.get('/news', (req,res) =>{
 //db에 있는 모든 도큐먼트 뽑아내기
 app.get('/list', async(req,res) =>{
     let result = await db.collection('post').find().toArray()
-    console.log(result)
+    // console.log(result)
 
     //ejs파일은 기본 경로가 views폴더라서 이렇게 써도 됨
     // post라는 이름으로 result들을 보낸다
@@ -66,9 +66,28 @@ app.get('/write',(req,res)=>{
 
 // 글 저장 라우터
 app.post('/add', async (req, res) => {
-  
   const {title,content} = req.body
-  await db.collection('post').insertOne({title:title, content: content})
-  res.redirect('/list')
-
+  
+  //입력값 검사
+  if(title=='' || content==''){
+    res.send('공백은 에바지')
+  }else{
+    try {
+      const post = await db.collection('post');
+      console.log(title,content)
+      await post.insertOne({ title: title, content: content });
+      res.redirect('/list');
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('서버 오류');
+    }
+  }
 });
+
+//게시글 상세 페이지
+app.get('/detail/:id', async(req,res)=>{
+  console.log(req.params)
+  let result = await db.collection('post').findOne({_id: new ObjectId(req.params.id)})
+  console.log(result)
+  res.render('detail.ejs',{postDetail:result})
+})
