@@ -13,13 +13,14 @@
 <body class="grey-bg">
 
     <%- include('nav.ejs') %>
-    <div class="detail-bg">
-        <h4><%=postDetail.title%></h4>
-        <p><%=postDetail.content%></p>
-        <a href="/edit/<%=postDetail._id%>">✏️</a>
-        
-    </div>
 
+    <form class="form-box" action="/edit" method="POST">
+        <h4>글수정</h4>
+        <input name="id" value="<%=post._id%>" style="display : none">
+        <input name="title" value='<%=post.title%>'>
+        <input name="content" value="<%=post.content%>">
+        <button type="submit">수정하기</button>
+    </form>
 
 </body>
 

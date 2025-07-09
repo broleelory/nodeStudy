@@ -86,8 +86,37 @@ app.post('/add', async (req, res) => {
 
 //게시글 상세 페이지
 app.get('/detail/:id', async(req,res)=>{
-  console.log(req.params)
-  let result = await db.collection('post').findOne({_id: new ObjectId(req.params.id)})
-  console.log(result)
-  res.render('detail.ejs',{postDetail:result})
+  try{
+    console.log(req.params)
+    let result = await db.collection('post').findOne({_id: new ObjectId(req.params.id)})
+    console.log(result)
+    res.render('detail.ejs',{postDetail:result})
+
+  } catch(err){
+    console.error(err);
+    res.status(404).send('해당 게시글을 찾지 못했습니다');
+  }
+})
+
+//수정페이지 만들기
+app.get('/edit/:id', async(req,res)=>{
+  // console.log(req.params.id)
+  try{
+    let result = await db.collection('post').findOne({_id : new ObjectId(req.params.id)})
+    console.log(result)
+    res.render('edit.ejs',{post:result})
+  } catch(err){
+    console.error(err);
+    res.status(404).send('해당 게시글을 찾지 못했습니다');
+  }
+})
+
+//수정하기
+app.post('/edit',async(req,res)=>{
+  //수정해보자
+  console.log('버튼누른겟요청',req.body)
+   let result = await db.collection('post').updateOne({_id : new ObjectId(req.body.id)},{$set:{title:req.body.title, content:req.body.content           
+   }})
+   console.log(result)
+  res.redirect('/list')
 })
