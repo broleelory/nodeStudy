@@ -1,5 +1,23 @@
 const express = require('express')
 const app = express()
+const methodOverride = require('method-override')
+
+//passport 라이브러리 사용!
+const session = require('express-session')
+const passport = require('passport')
+const LocalStrategy = require('passport-local')
+
+app.use(passport.initialize())
+app.use(session({
+  secret: '암호화에 쓸 비번',
+  resave : false,
+  saveUninitialized : false
+}))
+
+app.use(passport.session()) 
+
+
+app.use(methodOverride('method'))
 //정적 파일들 public에 넣어서 사용
 app.use(express.static(__dirname + '/public'))
 
@@ -43,15 +61,33 @@ app.get('/news', (req,res) =>{
 })
 
 //db에 있는 모든 도큐먼트 뽑아내기
-app.get('/list', async(req,res) =>{
-    let result = await db.collection('post').find().toArray()
-    // console.log(result)
+app.get('/list/:num', async (req, res) => {
+  try {
+    const page = parseInt(req.params.num) || 1;
+    const limit = 5;
+    const skip = (page - 1) * limit;
 
-    //ejs파일은 기본 경로가 views폴더라서 이렇게 써도 됨
-    // post라는 이름으로 result들을 보낸다
-    res.render('list.ejs',{posts : result})
-    // res.sendFile(__dirname + '/index.html')
-})
+    const totalCount = await db.collection('post').countDocuments();
+    const totalPages = Math.ceil(totalCount / limit);
+
+    const result = await db.collection('post')
+      .find({})
+      .sort({ _id: -1 }) // -1 = 최신글부터 1 = 반대
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    res.render('list.ejs', {
+      posts: result,
+      currentPage: page,
+      totalPages: totalPages,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('서버 오류');
+  }
+});
+
 
 app.get('/time', (req,res) =>{
    const time = new Date()
@@ -119,4 +155,40 @@ app.post('/edit',async(req,res)=>{
    }})
    console.log(result)
   res.redirect('/list')
+})
+
+//가입기능
+
+//passport라이브러리 사용
+passport.use(new LocalStrategy(async (입력한아이디, 입력한비번, cb) => {
+  let result = await db.collection('user').findOne({ username : 입력한아이디})
+  if (!result) {
+    return cb(null, false, { message: '아이디 DB에 없음' })
+  }
+  if (result.password == 입력한비번) {
+    return cb(null, result)
+  } else {
+    return cb(null, false, { message: '비번불일치' });
+  }
+}))
+
+
+//로그인 기능
+app.get('/login',async(req,res)=>{
+  res.render('login.ejs')
+})
+
+//로그인 요청!?
+app.post('/login',async(req,res,next)=>{
+  
+  passport.authenticate('local',(error, user, info)=> {
+    if(error) return res.status(500).json(error)
+    if(!user) return res.status(401).json(info.message)
+      req.logIn(user, (err)=>{
+        if(err) return next(err)
+        res.redirect('/')
+     })
+
+  })(req,res,next) //아이디/비번을 DB와 비교
+
 })

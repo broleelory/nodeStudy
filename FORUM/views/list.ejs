@@ -11,18 +11,28 @@
 </head>
 
 <body class="grey-bg">
-    
+
     <%- include('nav.ejs') %>
 
     <div class="white-bg">
         <% for(let i =0;i<posts.length;i++){ %>
         <div class="list-box">
-            <a href="/detail/<%=posts[i]._id%>"><h4><%= posts[i].title %></h4></a>
+            <a href="/detail/<%=posts[i]._id%>">
+                <h4><%= posts[i].title %></h4>
+            </a>
             <p><%= posts[i].content %></p>
         </div>
-       <% } %> 
+        <% } %>
     </div>
-
+    <nav class="pagination justify-content-center mt-4">
+        <% for (let i = 1; i <= totalPages; i++) { %>
+        <a class="btn btn-sm <%= i === currentPage ? 'btn-primary' : 'btn-outline-primary' %> mx-1"
+            href="/list/<%= i %>">
+            <%= i %>
+        </a>
+        <% } %>
+    </nav>
+    <!-- <script><%console.log('포스트길이',posts.length)%></script> -->
 </body>
 
 </html>
