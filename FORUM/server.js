@@ -11,7 +11,8 @@ app.use(passport.initialize())
 app.use(session({
   secret: '암호화에 쓸 비번',
   resave : false,
-  saveUninitialized : false
+  saveUninitialized : false,
+  cookie : {maxAge:60*60*1000} //쿠키 1시간 유지
 }))
 
 app.use(passport.session()) 
@@ -173,22 +174,43 @@ passport.use(new LocalStrategy(async (입력한아이디, 입력한비번, cb) =
 }))
 
 
-//로그인 기능
-app.get('/login',async(req,res)=>{
-  res.render('login.ejs')
-})
 
 //로그인 요청!?
-app.post('/login',async(req,res,next)=>{
-  
-  passport.authenticate('local',(error, user, info)=> {
-    if(error) return res.status(500).json(error)
-    if(!user) return res.status(401).json(info.message)
-      req.logIn(user, (err)=>{
-        if(err) return next(err)
-        res.redirect('/')
-     })
+app.post('/login', (req, res, next) => {
+  passport.authenticate('local', (error, user, info) => {
+    if (error) return res.status(500).json({ message: '서버 오류', error });
+    if (!user) return res.status(401).json({ message: info?.message || '로그인 실패' });
 
-  })(req,res,next) //아이디/비번을 DB와 비교
+    req.logIn(user, (err) => {
+      if (err) return next(err);
+      return res.redirect('/');
+    });
+  })(req, res, next);
+});
 
+
+  passport.serializeUser((user,done)=>{
+    console.log(user)
+    process.nextTick(()=>{
+      done(null, { id:user._id, username : user.username})
+    })
+  })
+  //쿠키를 분석함
+  passport.deserializeUser(async(user,done)=>{
+    let result = await db.collection('user').findOne({_id : new ObjectId(user.id)})
+    delete result.password
+    process.nextTick(()=>{
+      done(null,user)
+    })
+  })
+
+  //로그인 get요청
+  app.get('/login',async(req,res)=>{
+    console.log(req.user)
+    res.render('login.ejs')
 })
+
+  app.get('/mypage',async(req,res)=>{
+    console.log("유저네임은",req.user)
+    res.render('mypage.ejs',{name:req.user.username})
+  })
