@@ -1,18 +1,24 @@
 const express = require('express')
 const app = express()
 const methodOverride = require('method-override')
+const bcrypt = require('bcrypt')
 
 //passport 라이브러리 사용!
 const session = require('express-session')
 const passport = require('passport')
 const LocalStrategy = require('passport-local')
+const MongoStore = require('connect-mongo')
 
 app.use(passport.initialize())
 app.use(session({
   secret: '암호화에 쓸 비번',
   resave : false,
   saveUninitialized : false,
-  cookie : {maxAge:60*60*1000} //쿠키 1시간 유지
+  cookie : {maxAge:60*60*1000}, //쿠키 1시간 유지
+  store : MongoStore.create({
+    mongoUrl : 'mongodb+srv://admin:qwer1234@cluster0.9gc9v.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
+    dbName : 'forum'
+  })
 }))
 
 app.use(passport.session()) 
@@ -166,7 +172,9 @@ passport.use(new LocalStrategy(async (입력한아이디, 입력한비번, cb) =
   if (!result) {
     return cb(null, false, { message: '아이디 DB에 없음' })
   }
-  if (result.password == 입력한비번) {
+  
+  await bcrypt.compare(입력한비번, result.password)//입력 비번과 db의 해싱된 비번 비교해줌
+  if (result.password == 입력한비번) {//유저 입력 비번과 db비번
     return cb(null, result)
   } else {
     return cb(null, false, { message: '비번불일치' });
@@ -210,7 +218,27 @@ app.post('/login', (req, res, next) => {
     res.render('login.ejs')
 })
 
+  //마이페이지
   app.get('/mypage',async(req,res)=>{
     console.log("유저네임은",req.user)
     res.render('mypage.ejs',{name:req.user.username})
   })
+  
+  //가입페이지
+  app.get('/register',async(req,res)=>{
+    res.render('register.ejs')
+})
+
+  //가입기능
+  app.post('/register',async(req,res)=>{
+    console.log("가입페이지")
+
+    let hash = await bcrypt.hash('req.body.password', 10)
+    console.log(hash)
+
+    await db.collection('user').insertOne({
+      username : req.body.username, 
+      password : hash
+    })
+    res.redirect('/')
+})
