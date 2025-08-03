@@ -1,13 +1,17 @@
+
 const express = require('express')
 const app = express()
 const methodOverride = require('method-override')
 const bcrypt = require('bcrypt')
+require('dotenv').config(); //환경변수 설정
 
 //passport 라이브러리 사용!
 const session = require('express-session')
 const passport = require('passport')
 const LocalStrategy = require('passport-local')
 const MongoStore = require('connect-mongo')
+
+
 
 app.use(passport.initialize())
 app.use(session({
@@ -16,7 +20,7 @@ app.use(session({
   saveUninitialized : false,
   cookie : {maxAge:60*60*1000}, //쿠키 1시간 유지
   store : MongoStore.create({
-    mongoUrl : 'mongodb+srv://admin:qwer1234@cluster0.9gc9v.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
+    mongoUrl : process.env.DB_URL,
     dbName : 'forum'
   })
 }))
@@ -34,13 +38,16 @@ app.set('view engine','ejs')
 //요청.body 쓰려면 이거 필요
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
-
+app.use('/list',(req,res,next)=>{//list로 시작하는 API로 요청시 현재시간 터미널에 출력
+  console.log(new Date())
+  next()
+})
 
 // 몽고db 연결 코드
 const { MongoClient,ObjectId } = require('mongodb')
 
 let db
-const url = 'mongodb+srv://admin:qwer1234@cluster0.9gc9v.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+const url = process.env.DB_URL
 new MongoClient(url).connect().then((client)=>{
   console.log('DB연결성공')
   db = client.db('forum')
@@ -52,9 +59,16 @@ new MongoClient(url).connect().then((client)=>{
   console.log(err)
 })
 
+ function checkLogin(req,res,next){
+  
+  if(!req.user){
+    res.send('로그인하세요')
+  }
+  next()
+ }
 
 
-app.get('/', (req,res) =>{
+app.get('/', checkLogin,(req,res) =>{//checkLogin -> 요청과 응답 사이에 실행되는 미들웨어
     res.send('반갑습니다')
 })
 
